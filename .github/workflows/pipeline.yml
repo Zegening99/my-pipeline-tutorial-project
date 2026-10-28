@@ -5,7 +5,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
+  # stage build
   build-job:
     runs-on: ubuntu-latest
     steps:
@@ -15,7 +25,17 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          name: build
-          path: build/
+          path: build
+
+  # stage deploy (chờ build-job xong)
+  pages:
+    needs: build-job
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
